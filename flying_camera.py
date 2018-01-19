@@ -2,26 +2,32 @@
 from mathutils import Vector
 import os
 class flyingCam:
-    def __init__(self, normal, fov=20):
-        self.normal=Vector(normal)
-        self.FOV=fov
+    def __init__(self, normal, fovh=50,fovv=40):
+        normal_vec = Vector(normal)
+        mag = normal_vec.magnitude
+        self.normal=normal_vec / mag
+        self.FOV=fovh
+        bpy.data.cameras["Camera"].lens_unit = 'FOV'
+        bpy.data.cameras["Camera"].angle = fovh / 180.0 * pi
+        bpy.data.scenes["Scene"].render.resolution_x = 2000
+        bpy.data.scenes["Scene"].render.resolution_y = 2000 * fovv / fovh
     def print_heading(self):
         print(cam.location)
-    def to_cursor(self):
+    def aim(self):
         cam = D.objects["Camera"]
         cursor_loc = bpy.context.scene.cursor_location
         heading = cam.location - cursor_loc
         rot_quat = heading.to_track_quat('Z', 'X')
         cam.rotation_euler = rot_quat.to_euler()
         print(cam.rotation_euler)
-    def move_to_cursor(self):
+    def to_cursor(self):
         cam = D.objects["Camera"]
         cursor_loc = bpy.context.scene.cursor_location
         heading = cam.location - cursor_loc
         cam.location -= heading/2.0
         rot_quat = heading.to_track_quat('Z', 'X')
         cam.rotation_euler = rot_quat.to_euler()
-    def move_forward(self, distance=1):
+    def forward(self, distance=1):
         cam = D.objects["Camera"]
         #Taken from: https://blender.stackexchange.com/questions/13738/
         #how-to-calculate-camera-direction-and-up-vector
@@ -30,25 +36,23 @@ class flyingCam:
         cam.location += cam_direction * distance
         e_rot = cam.rotation_euler
         heading_vec = Vector((e_rot.x,e_rot.y,e_rot.z))
-    def take_pic(self, filepath):
+    def pic(self, filepath):
         #Taken from https://blender.
         #stackexchange.com/questions/30643/how-to-toggle-to-camera-view-via-python
         area = next(area for area in bpy.context.screen.areas if area.type == 'VIEW_3D')
         area.spaces[0].region_3d.view_perspective = 'CAMERA'
         i = 0
         full_file_path = filepath + str(i) + '.png'
-        print(full_file_path)
         while os.path.isfile(full_file_path):
             i+=1
             full_file_path = filepath + str(i) + '.png'
         D.scenes["Scene"].render.filepath = filepath + str(i) + '.png'
         bpy.ops.render.opengl(write_still=True)
         area.spaces[0].region_3d.view_perspective = 'PERSP'
-    def place_cam(self,offset_tuple):
+    def place(self,offset):
         cam = D.objects["Camera"]
         cursor_loc = bpy.context.scene.cursor_location
-        cam.location = cursor_loc + Vector(offset_tuple)
+        cam.location = cursor_loc + self.normal * offset
         
-a = flyingCam((0,1,0),20)
-a.take_pic("/home/david/Documents/blender_outputs/test")
-
+a = flyingCam((0,0,1),20)
+a.place(10)
