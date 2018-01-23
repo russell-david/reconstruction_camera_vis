@@ -5,6 +5,7 @@ import os
 class flyingCam:
     def __init__(self, normal, fovh=50,fovv=40):
         """this is the only non-default constructor. It takes in the world-up tuple, the horizontal fov and the vertical fov"""
+        cam = D.objects["Camera"]
         normal_vec = Vector(normal)
         mag = normal_vec.magnitude
         self.normal=normal_vec / mag
@@ -25,56 +26,35 @@ class flyingCam:
         print('Also, you will generally want to set Viewpoint shading to material and make the material "emit"')
     def aim(self):
         """This points the camera toward the cursor"""
-        cam = D.objects["Camera"]
         cursor_loc = bpy.context.scene.cursor_location
-        heading = cam.location - cursor_loc
+        heading = self.cam.location - cursor_loc
         rot_quat = heading.to_track_quat('Z', 'X')
-        cam.rotation_euler = rot_quat.to_euler()
+        self.cam.rotation_euler = rot_quat.to_euler()
     def to_cursor(self):
         """This moves the camera halfway to the cursor"""
-        cam = D.objects["Camera"]
         cursor_loc = bpy.context.scene.cursor_location
-        heading = cam.location - cursor_loc
-        cam.location -= heading/2.0
+        heading = self.cam.location - cursor_loc
+        self.cam.location -= heading/2.0
         rot_quat = heading.to_track_quat('Z', 'X')
-        cam.rotation_euler = rot_quat.to_euler()
+        self.cam.rotation_euler = rot_quat.to_euler()
     def forward(self, distance=1):
         """Similar to the above, but moves a specified distance"""
-        cam = D.objects["Camera"]
         #Taken from: https://blender.stackexchange.com/questions/13738/
         #how-to-calculate-camera-direction-and-up-vector
-        up = cam.matrix_world.to_quaternion() * Vector((0.0, 1.0, 0.0))
-        cam_direction = cam.matrix_world.to_quaternion() * Vector((0.0, 0.0, -1.0))
+        up = self.cam.matrix_world.to_quaternion() * Vector((0.0, 1.0, 0.0))
+        cam_direction = self.cam.matrix_world.to_quaternion() * Vector((0.0, 0.0, -1.0))
         cam.location += cam_direction * distance
-        e_rot = cam.rotation_euler
+        e_rot = self.cam.rotation_euler
         heading_vec = Vector((e_rot.x,e_rot.y,e_rot.z))
     def pic(self, filepath='/home/david/Documents/blender_outputs/stabilized_render'):
         """Takes a picture using the full render. The filepath is only needed on the first capture"""
         #Taken from https://blender.
         #stackexchange.com/questions/30643/how-to-toggle-to-camera-view-via-python
         if filepath == '/home/david/Documents/blender_outputs/stabilized_render':
-            filepath = self.filepath
+            filepath = s
         self.filepath = filepath
         area = next(area for area in bpy.context.screen.areas if area.type == 'VIEW_3D')
-        area.spaces[0].region_3d.view_perspective = 'CAMERA'
-        i = 0
-        full_file_path = filepath + str(i) + '.png'
-        while os.path.isfile(full_file_path):
-            i+=1
-            full_file_path = filepath + str(i) + '.png'
-        self.aim()
-        self.rot()
-        D.scenes["Scene"].render.filepath = filepath + str(i) + '.png'
-        bpy.ops.render.render(write_still=True)
-        area.spaces[0].region_3d.view_perspective = 'PERSP'
-    def picgl(self, filepath=''):
-        """Takes a picture more quickly"""
-        #Taken from https://blender.
-        #stackexchange.com/questions/30643/how-to-toggle-to-camera-view-via-python
-        if filepath == '':
-            filepath = self.filepath
-        self.filepath = filepath
-        area = next(area for area in bpy.context.screen.areas if area.type == 'VIEW_3D')
+        initial_view_perspective = area.spaces[0].region_3d.view_perspective
         area.spaces[0].region_3d.view_perspective = 'CAMERA'
         i = 0
         full_file_path = filepath + str(i) + '.png'
@@ -85,12 +65,31 @@ class flyingCam:
         self.rot()
         D.scenes["Scene"].render.filepath = filepath + str(i) + '.png'
         bpy.ops.render.opengl(write_still=True)
-        area.spaces[0].region_3d.view_perspective = 'PERSP'
+        area.spaces[0].region_3d.view_perspective = initial_view_perspective
+    def picgl(self, filepath='/home/david/Documents/blender_outputs/stabilized_render'):
+        """Takes a picture more quickly"""
+        #Taken from https://blender.
+        #stackexchange.com/questions/30643/how-to-toggle-to-camera-view-via-python
+        if filepath == '/home/david/Documents/blender_outputs/stabilized_render':
+            filepath = self.filepath
+        self.filepath = filepath
+        area = next(area for area in bpy.context.screen.areas if area.type == 'VIEW_3D')
+        initial_view_perspective = area.spaces[0].region_3d.view_perspective
+        area.spaces[0].region_3d.view_perspective = 'CAMERA'
+        i = 0
+        full_file_path = filepath + str(i) + '.png'
+        while os.path.isfile(full_file_path):
+            i+=1
+            full_file_path = filepath + str(i) + '.png'
+        self.aim()
+        self.rot()
+        D.scenes["Scene"].render.filepath = filepath + str(i) + '.png'
+        bpy.ops.render.opengl(write_still=True)
+        area.spaces[0].region_3d.view_perspective = initial_view_perspective
     def place(self,offset):
         """Places the camera a specified distance above the clicked point"""
-        cam = D.objects["Camera"]
         cursor_loc = bpy.context.scene.cursor_location
-        cam.location = cursor_loc + self.normal * offset
+        self.cam.location = cursor_loc + self.normal * offset
     def rot(self):
         """Rotates the camera so it's up axis is as close as possible to the world up"""
         num_rotations = 200
@@ -119,6 +118,29 @@ class flyingCam:
             return angle
         else:
             return 2 * pi - angle
-            
+
+        
+class cameraRig:
+    def __init__(self, offset_list, fov_list):
+        self.cam = D.objects['Camera']
+        self.cam_coords_list = []
+        self.cam_fov_list = []
+        for rt in offset_list:
+            matrix_rt = Matrix(rt)
+            self.cam_coords_list.append(matrix_rt)
+            print(matrix_rt)
+        for fov in fov_list:
+            self.cam_fov_list.append(fov)
+        print(self.cam_coords_list)
+        print(self.cam_fov_list)
+    def pic(self, mat):
+        initial_world_matrix = cam.matrix_world
+        for rt in self.cam_coords:
+            new_rt = initial_world_matrix * rt
+            print(new_rt)
+            cam.world_matrix = new_rt
+            cam.
+        
 c = flyingCam((0,-1,0),60,40)
 c.rot()
+rig = cameraRig([( (0, -1, 0, 0), (1, 0, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1)) , ((1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1))], [2,3])
