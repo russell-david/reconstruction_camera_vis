@@ -1,6 +1,6 @@
 import cv2
-vidname = 'MAX_0015.MP4'
-vidcap = cv2.VideoCapture('/home/david/Documents/'+vidname)
+vidname = 'MAX_0009'
+vidcap = cv2.VideoCapture('/home/david/Documents/'+vidname+'.MP4')
 success,image = vidcap.read()
 count = 0
 print('Vidcap read: ', success)
@@ -12,4 +12,4 @@ while success:
       print("this is the %dth frame" % count)
   if count % 10 == 0:
       #print('Read a new frame: ', success)
-      cv2.imwrite('outputfiles/'+vidname+"%d.jpg" % count, image)     # save frame as JPEG file
+      cv2.imwrite('../sampled_frames/'+vidname+"_%d.jpg" % count, image)     # save frame as JPEG file
